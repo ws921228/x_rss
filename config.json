@@ -2,6 +2,15 @@
     "telegram_token": "7938729341:AAGuiw5J6sVC8xPOZcl_vw-PcaGq8_SYRzQ",
     "telegram_chat_id": "7399708783",
     "telegram_channel_id": "-1002452325029",
-    "nitter_rss_url": "https://nitter.net/Rewkang/rss",
+    "rss_feeds": [
+        {
+            "name": "Rewkang",
+            "url": "https://nitter.net/Rewkang/rss"
+        },
+        {
+            "name": "J_smile9212",
+            "url": "https://nitter.net/j_smile9212/rss"
+        }
+    ],
     "check_interval": 300
 }
