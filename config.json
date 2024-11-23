@@ -1,16 +1,25 @@
 {
     "telegram_token": "7938729341:AAGuiw5J6sVC8xPOZcl_vw-PcaGq8_SYRzQ",
-    "telegram_chat_id": "7399708783",
+    "telegram_chat_id": "7399708783", 
     "telegram_channel_id": "-1002452325029",
     "rss_feeds": [
         {
             "name": "Rewkang",
-            "url": "https://nitter.net/Rewkang/rss"
+            "urls": [
+                "https://nitter.cz/Rewkang/rss",
+                "https://nitter.poast.org/Rewkang/rss",
+                "https://nitter.privacydev.net/Rewkang/rss"
+            ]
         },
         {
             "name": "J_smile9212",
-            "url": "https://nitter.net/j_smile9212/rss"
+            "urls": [
+                "https://nitter.cz/j_smile9212/rss",
+                "https://nitter.poast.org/j_smile9212/rss",
+                "https://nitter.privacydev.net/j_smile9212/rss"
+            ]
         }
     ],
-    "check_interval": 300
+    "check_interval": 300,
+    "retry_interval": 60
 }
