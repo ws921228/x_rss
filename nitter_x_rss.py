@@ -3,7 +3,13 @@ import telegram
 import time
 import json
 from datetime import datetime
+from email.utils import parsedate_to_datetime
 import os
+import re
+from datetime import timezone, timedelta
+
+# KST 시간대 설정
+KST = timezone(timedelta(hours=9))
 
 # 설정 파일 로드
 def load_config():
@@ -48,31 +54,68 @@ def load_last_time(feed_name):
         # GitHub Actions에서 처음 실행시 현재 시간 - 1시간으로 설정
         return time.time() - 3600
 
+def clean_html(raw_html):
+    """HTML 태그를 텍스트로 변환하고 정리"""
+    # HTML 태그 제거
+    cleanr = re.compile('<.*?>')
+    text = re.sub(cleanr, '', raw_html)
+    # 연속된 공백 제거
+    text = ' '.join(text.split())
+    # 특수 문자 이스케이프
+    text = text.replace('<', '&lt;').replace('>', '&gt;')
+    return text
+
 async def process_feed(bot, config, feed_info):
     feed_name = feed_info['name']
-    feed_url = feed_info['url']
+    feed_urls = feed_info['urls']  # 변경: url -> urls
     last_check = load_last_time(feed_name)
     current_time = time.time()
 
-    try:
-        entries = parse_rss_feed(feed_url)
-        
-        for entry in reversed(entries):
-            entry_time = time.mktime(entry.published_parsed)
-            if entry_time > last_check:
-                message = (
-                    f"🔔 새로운 포스트 - {feed_name}\n\n"
-                    f"<b>{entry.title}</b>\n\n"
-                    f"{entry.description}\n\n"
-                    f"🔗 <a href='{entry.link}'>원본 링크</a>"
-                )
+    for feed_url in feed_urls:  # 각 URL 시도
+        try:
+            entries = parse_rss_feed(feed_url)
+            if entries:  # 성공적으로 피드를 가져온 경우
+                print(f"Successfully fetched feed from: {feed_url}")
                 
-                sent = await send_telegram_message(bot, config, message)
-                if sent:
-                    save_last_time(feed_name, current_time)
-                    time.sleep(2)
-    except Exception as e:
-        print(f"Error processing feed {feed_name}: {e}")
+                for entry in reversed(entries):
+                    # RSS의 pubDate 문자열을 datetime 객체로 변환
+                    try:
+                        if hasattr(entry, 'published'):
+                            entry_date = parsedate_to_datetime(entry.published)
+                        else:
+                            entry_date = parsedate_to_datetime(entry.pubDate)
+                        entry_time = entry_date.timestamp()
+                    except Exception as e:
+                        print(f"Error parsing date: {e}")
+                        continue
+
+                    if entry_time > last_check:
+                        # description에서 HTML 태그 제거
+                        clean_description = clean_html(entry.description)
+                        
+                        # UTC 시간을 KST로 변환
+                        kst_time = entry_date.astimezone(KST)
+                        
+                        message = (
+                            f"🔔 새로운 포스트 - {feed_name}\n\n"
+                            f"<b>{clean_html(entry.title)}</b>\n\n"
+                            f"{clean_description}\n\n"
+                            f"🕐 {kst_time.strftime('%Y-%m-%d %H:%M:%S')} (KST)\n"
+                            f"🔗 <a href='{entry.link}'>원본 링크</a>"
+                        )
+                        
+                        sent = await send_telegram_message(bot, config, message)
+                        if sent:
+                            save_last_time(feed_name, current_time)
+                            time.sleep(2)
+                
+                break  # 성공적으로 처리된 경우 다음 URL 시도하지 않음
+                
+        except Exception as e:
+            print(f"Error with URL {feed_url}: {e}")
+            continue  # 다음 URL 시도
+    else:  # 모든 URL이 실패한 경우
+        print(f"All URLs failed for feed {feed_name}")
 
 async def main():
     try:
